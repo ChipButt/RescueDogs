@@ -16,8 +16,9 @@ export class InputController {
   }
 
   bindTouchMovement() {
-    const area = document.getElementById("playArea");
+    const area = document.getElementById("app");
     area.addEventListener("pointerdown", (event) => {
+      if (event.target.closest("button")) return;
       event.preventDefault();
       this.pointerStart = { x: event.clientX, y: event.clientY };
       this.activeDirection = null;
@@ -47,11 +48,14 @@ export class InputController {
   bindButtons() {
     document.getElementById("dropFoodBtn").addEventListener("pointerdown", (event) => {
       event.preventDefault();
+      event.stopPropagation();
       this.mission.dropFood();
       this.renderer.render();
     });
 
-    document.getElementById("restartBtn").addEventListener("click", () => {
+    document.getElementById("restartBtn").addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       this.mission.reset();
       this.renderer.render();
     });
