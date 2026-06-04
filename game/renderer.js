@@ -167,7 +167,7 @@ export class Renderer {
     ctx.fillRect(x + tile * 0.30, y + tile * 0.10, tile * 0.40, tile * 0.10);
   }
 
-  drawFogOfWar(ctx, cameraX, cameraY, tile, cols, rows, width, height) {
+  drawFogOfWar(ctx, cameraX, cameraY, tile, cols, rows) {
     const player = this.mission.player;
     const radius = CONFIG.playerVisionRange;
     for (let sy = 0; sy < rows; sy += 1) {
@@ -176,20 +176,10 @@ export class Renderer {
         const my = cameraY + sy;
         const distance = Math.abs(mx - player.x) + Math.abs(my - player.y);
         if (distance <= radius) continue;
-        let alpha = 0.78;
-        if (distance === radius + 1) alpha = 0.48;
-        if (distance === radius + 2) alpha = 0.65;
-        ctx.fillStyle = `rgba(3, 8, 5, ${alpha})`;
+        ctx.fillStyle = "#020502";
         ctx.fillRect(sx * tile, sy * tile, tile + 1, tile + 1);
       }
     }
-    ctx.strokeStyle = "rgba(255, 241, 164, 0.18)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const px = (player.x - cameraX + 0.5) * tile;
-    const py = (player.y - cameraY + 0.5) * tile;
-    ctx.arc(px, py, (radius + 0.5) * tile, 0, Math.PI * 2);
-    ctx.stroke();
   }
 
   toScreen(entity, cameraX, cameraY, tile, cols, rows) {
