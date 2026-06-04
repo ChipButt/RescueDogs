@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#172316" />
+  <title>Dog Rescue Maze</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <div class="stat"><span>Food</span><strong id="foodCount">0</strong></div>
+      <div class="title-block">
+        <h1>Trash Yard Rescue</h1>
+        <p id="statusText">Find dogs. Avoid ferals. Get back out.</p>
+      </div>
+      <div class="stat"><span>Saved</span><strong id="rescuedCount">0</strong></div>
+    </header>
+
+    <main class="game-shell">
+      <canvas id="gameCanvas" width="360" height="360" aria-label="Dog rescue maze game canvas"></canvas>
+    </main>
+
+    <section class="controls" aria-label="Game controls">
+      <div class="dpad" aria-label="Movement controls">
+        <button class="control-btn up" data-dir="north" aria-label="Move north">▲</button>
+        <button class="control-btn left" data-dir="west" aria-label="Move west">◀</button>
+        <button class="control-btn centre" id="waitBtn" aria-label="Wait">•</button>
+        <button class="control-btn right" data-dir="east" aria-label="Move east">▶</button>
+        <button class="control-btn down" data-dir="south" aria-label="Move south">▼</button>
+      </div>
+      <div class="action-panel">
+        <button id="dropFoodBtn" class="primary-action">Drop Food</button>
+        <button id="restartBtn" class="secondary-action">Restart</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 id="modalTitle">Mission</h2>
+      <p id="modalText"></p>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
