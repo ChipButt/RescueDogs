@@ -23,37 +23,43 @@ export class Renderer {
   resize() {
     const parent = this.canvas.parentElement;
     const rect = parent.getBoundingClientRect();
-    const size = Math.floor(Math.min(rect.width || 360, rect.height || 360));
+    const width = Math.floor(rect.width || 360);
+    const height = Math.floor(rect.height || 360);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.canvas.style.width = `${size}px`;
-    this.canvas.style.height = `${size}px`;
-    this.canvas.width = Math.floor(size * dpr);
-    this.canvas.height = Math.floor(size * dpr);
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+    this.canvas.width = Math.floor(width * dpr);
+    this.canvas.height = Math.floor(height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.cssSize = size;
+    this.cssWidth = width;
+    this.cssHeight = height;
   }
 
   render() {
     const ctx = this.ctx;
-    const size = this.cssSize || 360;
-    ctx.clearRect(0, 0, size, size);
-    const tile = size / CONFIG.visibleTiles;
-    const player = this.mission.player;
-    const half = Math.floor(CONFIG.visibleTiles / 2);
-    const cameraX = player.x - half;
-    const cameraY = player.y - half;
+    const width = this.cssWidth || 360;
+    const height = this.cssHeight || 360;
+    ctx.clearRect(0, 0, width, height);
 
-    for (let sy = 0; sy < CONFIG.visibleTiles; sy += 1) {
-      for (let sx = 0; sx < CONFIG.visibleTiles; sx += 1) {
+    const tile = Math.min(width, height) / CONFIG.visibleTiles;
+    const visibleCols = Math.ceil(width / tile);
+    const visibleRows = Math.ceil(height / tile);
+    const player = this.mission.player;
+    const cameraX = player.x - Math.floor(visibleCols / 2);
+    const cameraY = player.y - Math.floor(visibleRows / 2);
+
+    for (let sy = 0; sy < visibleRows; sy += 1) {
+      for (let sx = 0; sx < visibleCols; sx += 1) {
         this.drawTile(ctx, cameraX + sx, cameraY + sy, sx * tile, sy * tile, tile);
       }
     }
 
-    this.drawFood(ctx, cameraX, cameraY, tile);
-    this.drawRescueDogs(ctx, cameraX, cameraY, tile);
-    this.drawFeralDogs(ctx, cameraX, cameraY, tile);
-    this.drawFollowers(ctx, cameraX, cameraY, tile);
-    this.drawPlayer(ctx, half * tile, half * tile, tile);
+    this.drawFood(ctx, cameraX, cameraY, tile, visibleCols, visibleRows);
+    this.drawRescueDogs(ctx, cameraX, cameraY, tile, visibleCols, visibleRows);
+    this.drawFeralDogs(ctx, cameraX, cameraY, tile, visibleCols, visibleRows);
+    this.drawFollowers(ctx, cameraX, cameraY, tile, visibleCols, visibleRows);
+    this.drawPlayer(ctx, (player.x - cameraX) * tile, (player.y - cameraY) * tile, tile);
+    this.drawFogOfWar(ctx, cameraX, cameraY, tile, visibleCols, visibleRows, width, height);
   }
 
   drawTile(ctx, mx, my, x, y, tile) {
@@ -65,13 +71,16 @@ export class Renderer {
       ctx.fillStyle = "#403528";
       ctx.fillRect(x, y, tile, tile);
       ctx.fillStyle = "#5a4b39";
-      ctx.fillRect(x + 3, y + 4, tile - 8, 7);
+      ctx.fillRect(x + tile * 0.09, y + tile * 0.13, tile * 0.72, tile * 0.20);
       ctx.fillStyle = "#283521";
-      ctx.fillRect(x + 9, y + 15, tile - 12, 8);
+      ctx.fillRect(x + tile * 0.27, y + tile * 0.47, tile * 0.54, tile * 0.22);
       return;
     }
     ctx.fillStyle = "#6b5532";
     ctx.fillRect(x, y, tile, tile);
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, tile, tile);
     if (isStart) {
       ctx.strokeStyle = "#f1d27a";
       ctx.lineWidth = 3;
@@ -79,9 +88,9 @@ export class Renderer {
     }
   }
 
-  drawFood(ctx, cameraX, cameraY, tile) {
+  drawFood(ctx, cameraX, cameraY, tile, cols, rows) {
     for (const bowl of this.mission.foodBowls) {
-      const pos = this.toScreen(bowl, cameraX, cameraY, tile);
+      const pos = this.toScreen(bowl, cameraX, cameraY, tile, cols, rows);
       if (!pos) continue;
       ctx.fillStyle = "#e2d7bb";
       ctx.beginPath();
@@ -92,10 +101,10 @@ export class Renderer {
     }
   }
 
-  drawRescueDogs(ctx, cameraX, cameraY, tile) {
+  drawRescueDogs(ctx, cameraX, cameraY, tile, cols, rows) {
     for (const dog of this.mission.map.rescueDogs) {
       if (dog.state !== "waiting") continue;
-      const pos = this.toScreen(dog, cameraX, cameraY, tile);
+      const pos = this.toScreen(dog, cameraX, cameraY, tile, cols, rows);
       if (!pos) continue;
       drawDog(ctx, pos.x, pos.y, tile, "#c99b5b", "#7b4c2e");
       ctx.fillStyle = "#fff2c4";
@@ -105,21 +114,44 @@ export class Renderer {
     }
   }
 
-  drawFollowers(ctx, cameraX, cameraY, tile) {
+  drawFollowers(ctx, cameraX, cameraY, tile, cols, rows) {
     for (const dog of this.mission.player.rescuedDogs) {
-      const pos = this.toScreen(dog, cameraX, cameraY, tile);
+      const pos = this.toScreen(dog, cameraX, cameraY, tile, cols, rows);
       if (pos) drawDog(ctx, pos.x, pos.y, tile, "#d6b16c", "#8f673d");
     }
   }
 
-  drawFeralDogs(ctx, cameraX, cameraY, tile) {
+  drawFeralDogs(ctx, cameraX, cameraY, tile, cols, rows) {
+    const flashOn = Math.floor(Date.now() / 180) % 2 === 0;
     for (const dog of this.mission.map.feralDogs) {
-      const pos = this.toScreen(dog, cameraX, cameraY, tile);
+      const pos = this.toScreen(dog, cameraX, cameraY, tile, cols, rows);
       if (!pos) continue;
-      const body = dog.state === "chasing" ? "#7e3a2c" : "#5e5142";
-      drawDog(ctx, pos.x, pos.y, tile, body, "#2d241c");
+
+      let offsetX = 0;
+      if (dog.state === "alert") offsetX = flashOn ? -tile * 0.06 : tile * 0.06;
+
+      let body = "#5e5142";
+      let ear = "#2d241c";
+      if (dog.state === "alert") {
+        body = flashOn ? "#d94335" : "#7e3a2c";
+        ear = "#3a1712";
+      }
       if (dog.state === "chasing") {
-        ctx.strokeStyle = "#ffdf6b";
+        body = flashOn ? "#e34032" : "#7e3a2c";
+        ear = "#3a1712";
+      }
+
+      drawDog(ctx, pos.x + offsetX, pos.y, tile, body, ear);
+
+      if (dog.state === "alert") {
+        ctx.fillStyle = "#ffef73";
+        ctx.font = `${tile * 0.52}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("!", pos.x + tile * 0.50, pos.y + tile * 0.12);
+      }
+
+      if (dog.state === "chasing") {
+        ctx.strokeStyle = flashOn ? "#ffdf6b" : "#ff5b4d";
         ctx.lineWidth = 2;
         ctx.strokeRect(pos.x + 3, pos.y + 3, tile - 6, tile - 6);
       }
@@ -135,10 +167,35 @@ export class Renderer {
     ctx.fillRect(x + tile * 0.30, y + tile * 0.10, tile * 0.40, tile * 0.10);
   }
 
-  toScreen(entity, cameraX, cameraY, tile) {
+  drawFogOfWar(ctx, cameraX, cameraY, tile, cols, rows, width, height) {
+    const player = this.mission.player;
+    const radius = CONFIG.playerVisionRange;
+    for (let sy = 0; sy < rows; sy += 1) {
+      for (let sx = 0; sx < cols; sx += 1) {
+        const mx = cameraX + sx;
+        const my = cameraY + sy;
+        const distance = Math.abs(mx - player.x) + Math.abs(my - player.y);
+        if (distance <= radius) continue;
+        let alpha = 0.78;
+        if (distance === radius + 1) alpha = 0.48;
+        if (distance === radius + 2) alpha = 0.65;
+        ctx.fillStyle = `rgba(3, 8, 5, ${alpha})`;
+        ctx.fillRect(sx * tile, sy * tile, tile + 1, tile + 1);
+      }
+    }
+    ctx.strokeStyle = "rgba(255, 241, 164, 0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const px = (player.x - cameraX + 0.5) * tile;
+    const py = (player.y - cameraY + 0.5) * tile;
+    ctx.arc(px, py, (radius + 0.5) * tile, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  toScreen(entity, cameraX, cameraY, tile, cols, rows) {
     const sx = entity.x - cameraX;
     const sy = entity.y - cameraY;
-    if (sx < 0 || sy < 0 || sx >= CONFIG.visibleTiles || sy >= CONFIG.visibleTiles) return null;
+    if (sx < 0 || sy < 0 || sx >= cols || sy >= rows) return null;
     return { x: sx * tile, y: sy * tile };
   }
 }
