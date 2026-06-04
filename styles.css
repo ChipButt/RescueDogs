@@ -1,0 +1,3 @@
+body { margin: 0; font-family: sans-serif; background: #172316; color: white; }
+canvas { display: block; width: 100%; height: 100%; background: #2e2619; }
+button { font: inherit; }
