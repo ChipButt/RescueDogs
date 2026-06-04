@@ -70,6 +70,13 @@ const mission = new Mission({
 renderer = new Renderer(canvas, mission);
 input = new InputController(mission, renderer);
 
+showModal({
+  title: "Landfill Rescue",
+  html: `<div class="intro-copy"><p><strong>Aim:</strong> find pups in the landfill who want to be rescued, feed them, and guide them safely back to the entrance.</p><p><strong>Move:</strong> swipe and hold on the landfill to keep walking in that direction.</p><p><strong>Beware:</strong> wild dogs can be territorial. If they spot you, they will chase you out of the Landfill.</p><p>Use the red <strong>DROP FOOD</strong> button to distract a chasing wild dog.</p></div>`,
+  actions: [{ label: "Start Rescue", action: () => { mission.isPaused = false; } }]
+});
+mission.isPaused = true;
+
 function loop(now) {
   input.update();
   mission.tick(now);
