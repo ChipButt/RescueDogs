@@ -133,18 +133,45 @@ export class Mission {
   updateFeralDogs() {
     for (const dog of this.map.feralDogs) {
       if (dog.state === "idle") this.updateIdleFeralDog(dog);
+      else if (dog.state === "alert") this.updateAlertFeralDog(dog);
       else if (dog.state === "chasing") this.updateChasingFeralDog(dog);
       else if (dog.state === "eating") this.updateEatingFeralDog(dog);
       else if (dog.state === "returning") this.updateReturningFeralDog(dog);
     }
   }
 
-  updateIdleFeralDog(dog) {
+  canDogDetectPlayer(dog) {
     const path = findPath(this.map, dog, this.player);
-    if (path && path.length <= dog.triggerRadius) {
+    return Boolean(path && path.length <= CONFIG.wildDogReactionRange);
+  }
+
+  updateIdleFeralDog(dog) {
+    if (this.canDogDetectPlayer(dog)) {
+      dog.state = "alert";
+      dog.alertTurnsLeft = CONFIG.feralAlertTurns;
+      this.status(`${dog.name} has spotted you!`);
+    }
+  }
+
+  updateAlertFeralDog(dog) {
+    const visibleFood = this.findVisibleFoodForDog(dog);
+    if (visibleFood) {
+      dog.state = "chasing";
+      this.updateChasingFeralDog(dog);
+      return;
+    }
+
+    if (!this.canDogDetectPlayer(dog)) {
+      dog.state = "idle";
+      dog.alertTurnsLeft = 0;
+      this.status(`${dog.name} lost sight of you.`);
+      return;
+    }
+
+    dog.alertTurnsLeft -= 1;
+    if (dog.alertTurnsLeft <= 0) {
       dog.state = "chasing";
       this.status(`${dog.name} is chasing you.`);
-      this.updateChasingFeralDog(dog);
     }
   }
 
@@ -177,6 +204,7 @@ export class Mission {
     const home = { x: dog.startX, y: dog.startY };
     if (samePos(dog, home)) {
       dog.state = "idle";
+      dog.alertTurnsLeft = 0;
       this.status(`${dog.name} has calmed down.`);
       return;
     }
@@ -184,7 +212,7 @@ export class Mission {
   }
 
   findVisibleFoodForDog(dog) {
-    const candidates = this.foodBowls.filter((bowl) => canSeeAlongCorridor(this.map, dog, bowl, 8)).sort((a, b) => manhattan(dog, a) - manhattan(dog, b));
+    const candidates = this.foodBowls.filter((bowl) => canSeeAlongCorridor(this.map, dog, bowl, CONFIG.wildDogReactionRange + 3)).sort((a, b) => manhattan(dog, a) - manhattan(dog, b));
     return candidates[0] || null;
   }
 
