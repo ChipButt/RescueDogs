@@ -1,7 +1,7 @@
 import { CONFIG } from "./config.js";
 
-export function createPlayer(start) {
-  return { x: start.x, y: start.y, direction: "south", food: CONFIG.startingFood, rescuedDogs: [], pathHistory: [] };
+export function createPlayer(start, startingFood = CONFIG.startingFood) {
+  return { x: start.x, y: start.y, direction: "south", food: Math.max(0, Number(startingFood) || 0), rescuedDogs: [], pathHistory: [] };
 }
 
 export function positionKey(x, y) {
