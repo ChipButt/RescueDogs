@@ -3,10 +3,12 @@ import { LEVEL_MAPS, parseMap } from "./maps.js";
 import { createPlayer, isWalkable, manhattan, samePos, moveOneStepToward, canSeeAlongCorridor, findPath } from "./entities.js";
 
 export class Mission {
-  constructor({ onStatus, onStats, onModal } = {}) {
+  constructor({ onStatus, onStats, onModal, onComplete, startingFood } = {}) {
     this.onStatus = onStatus || (() => {});
     this.onStats = onStats || (() => {});
     this.onModal = onModal || (() => {});
+    this.onComplete = onComplete || null;
+    this.startingFood = Math.max(0, Number(startingFood ?? CONFIG.startingFood) || 0);
     this.currentLevelIndex = 0;
     this.reset();
   }
@@ -15,7 +17,7 @@ export class Mission {
     this.currentLevelIndex = levelIndex % LEVEL_MAPS.length;
     this.level = LEVEL_MAPS[this.currentLevelIndex];
     this.map = parseMap(this.level.rows);
-    this.player = createPlayer(this.map.start);
+    this.player = createPlayer(this.map.start, this.startingFood);
     this.foodBowls = [];
     this.turn = 0;
     this.isOver = false;
@@ -35,6 +37,15 @@ export class Mission {
   status(text) { this.onStatus(text); }
   publishStats() { this.onStats({ food: this.player.food, rescued: this.player.rescuedDogs.length }); }
   setMoveDirection(direction) { this.moveDirection = direction; }
+
+  finishMission(result) {
+    this.lastResult = result;
+    if (this.onComplete) {
+      this.onComplete(result);
+      return true;
+    }
+    return false;
+  }
 
   tick(now) {
     if (this.isOver || this.isPaused) return;
@@ -227,7 +238,8 @@ export class Mission {
     if (!caughtBy) return;
     this.isOver = true;
     this.moveDirection = null;
-    this.lastResult = { success: false, dogsRescued: 0, foodRemaining: this.player.food, reason: "caught" };
+    const result = { success: false, dogsRescued: 0, foodRemaining: this.player.food, reason: "caught" };
+    if (this.finishMission(result)) return;
     this.onModal({ title: "Mission Failed", text: "The frightened dog chased you back out of the landfill. You will need to try again.", actions: [{ label: "Restart Mission", action: () => this.reset() }] });
   }
 
@@ -244,7 +256,8 @@ export class Mission {
     this.isOver = true;
     this.isPaused = false;
     this.moveDirection = null;
-    this.lastResult = { success: true, dogsRescued: this.player.rescuedDogs.length, foodRemaining: this.player.food, reason: "escaped", level: this.currentLevelIndex + 1 };
-    this.onModal({ title: "Mission Complete", text: `You rescued the pup from ${this.level.name} and returned with ${this.lastResult.foodRemaining} food left.`, actions: [{ label: "Next Level", action: () => this.nextLevel() }, { label: "Replay Level", action: () => this.reset() }] });
+    const result = { success: true, dogsRescued: this.player.rescuedDogs.length, foodRemaining: this.player.food, reason: "escaped", level: this.currentLevelIndex + 1 };
+    if (this.finishMission(result)) return;
+    this.onModal({ title: "Mission Complete", text: `You rescued the pup from ${this.level.name} and returned with ${result.foodRemaining} food left.`, actions: [{ label: "Next Level", action: () => this.nextLevel() }, { label: "Replay Level", action: () => this.reset() }] });
   }
 }
