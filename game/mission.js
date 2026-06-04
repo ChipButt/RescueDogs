@@ -1,5 +1,5 @@
 import { CONFIG } from "./config.js";
-import { STARTER_MAP, parseMap } from "./maps.js";
+import { LEVEL_MAPS, parseMap } from "./maps.js";
 import { createPlayer, isWalkable, manhattan, samePos, moveOneStepToward, canSeeAlongCorridor, findPath } from "./entities.js";
 
 export class Mission {
@@ -7,11 +7,14 @@ export class Mission {
     this.onStatus = onStatus || (() => {});
     this.onStats = onStats || (() => {});
     this.onModal = onModal || (() => {});
+    this.currentLevelIndex = 0;
     this.reset();
   }
 
-  reset() {
-    this.map = parseMap(STARTER_MAP);
+  reset(levelIndex = this.currentLevelIndex) {
+    this.currentLevelIndex = levelIndex % LEVEL_MAPS.length;
+    this.level = LEVEL_MAPS[this.currentLevelIndex];
+    this.map = parseMap(this.level.rows);
     this.player = createPlayer(this.map.start);
     this.foodBowls = [];
     this.turn = 0;
@@ -21,8 +24,12 @@ export class Mission {
     this.lastPlayerMoveAt = 0;
     this.lastFeralMoveAt = 0;
     this.lastResult = null;
-    this.status("Swipe and hold to move. Drop food while running.");
+    this.status(`${this.level.name}: find the pup and get back out.`);
     this.publishStats();
+  }
+
+  nextLevel() {
+    this.reset((this.currentLevelIndex + 1) % LEVEL_MAPS.length);
   }
 
   status(text) { this.onStatus(text); }
@@ -100,10 +107,10 @@ export class Mission {
     const canFeed = this.player.food >= dog.foodRequired;
     this.onModal({
       title: dog.name,
-      html: `<div class="rescue-card"><div class="dog-face">🐶</div><div class="dog-lines"><div>\"...whine...\"</div><div>This dog looks weak and needs help.</div><div class="food-need">🥣 x ${dog.foodRequired}</div></div></div>`,
+      html: `<div class="rescue-card"><div class="dog-face">🐶</div><div class="dog-lines"><div>\"...whine...\"</div><div>This pup looks weak and needs help.</div><div class="food-need">🥣 x ${dog.foodRequired}</div></div></div>`,
       actions: [
         { label: canFeed ? "Give Food" : "Not Enough Food", disabled: !canFeed, action: () => this.feedRescueDog(dog) },
-        { label: "Leave", action: () => { this.isPaused = false; this.status("You left the dog for now."); } }
+        { label: "Leave", action: () => { this.isPaused = false; this.status("You left the pup for now."); } }
       ]
     });
   }
@@ -160,14 +167,12 @@ export class Mission {
       this.updateChasingFeralDog(dog);
       return;
     }
-
     if (!this.canDogDetectPlayer(dog)) {
       dog.state = "idle";
       dog.alertTurnsLeft = 0;
       this.status(`${dog.name} lost sight of you.`);
       return;
     }
-
     dog.alertTurnsLeft -= 1;
     if (dog.alertTurnsLeft <= 0) {
       dog.state = "chasing";
@@ -223,7 +228,7 @@ export class Mission {
     this.isOver = true;
     this.moveDirection = null;
     this.lastResult = { success: false, dogsRescued: 0, foodRemaining: this.player.food, reason: "caught" };
-    this.onModal({ title: "Mission Failed", text: "The frightened dog chased you back out of the trash yard. You will need to try again.", actions: [{ label: "Restart Mission", action: () => this.reset() }] });
+    this.onModal({ title: "Mission Failed", text: "The frightened dog chased you back out of the landfill. You will need to try again.", actions: [{ label: "Restart Mission", action: () => this.reset() }] });
   }
 
   checkExitPrompt() {
@@ -232,14 +237,14 @@ export class Mission {
     if (!onExit || this.player.rescuedDogs.length === 0) return;
     this.isPaused = true;
     this.moveDirection = null;
-    this.onModal({ title: "Leave Trash Yard?", text: `You have ${this.player.rescuedDogs.length} rescued dog${this.player.rescuedDogs.length === 1 ? "" : "s"} following you. Leave now or keep exploring?`, actions: [{ label: "Leave Mission", action: () => this.completeMission() }, { label: "Keep Exploring", action: () => { this.isPaused = false; } }] });
+    this.onModal({ title: "Leave Landfill?", text: `You have ${this.player.rescuedDogs.length} rescued pup following you. Leave now?`, actions: [{ label: "Leave Mission", action: () => this.completeMission() }, { label: "Keep Exploring", action: () => { this.isPaused = false; } }] });
   }
 
   completeMission() {
     this.isOver = true;
     this.isPaused = false;
     this.moveDirection = null;
-    this.lastResult = { success: true, dogsRescued: this.player.rescuedDogs.length, foodRemaining: this.player.food, reason: "escaped" };
-    this.onModal({ title: "Mission Complete", text: `You rescued ${this.lastResult.dogsRescued} dog${this.lastResult.dogsRescued === 1 ? "" : "s"} and returned with ${this.lastResult.foodRemaining} food left.`, actions: [{ label: "Play Again", action: () => this.reset() }] });
+    this.lastResult = { success: true, dogsRescued: this.player.rescuedDogs.length, foodRemaining: this.player.food, reason: "escaped", level: this.currentLevelIndex + 1 };
+    this.onModal({ title: "Mission Complete", text: `You rescued the pup from ${this.level.name} and returned with ${this.lastResult.foodRemaining} food left.`, actions: [{ label: "Next Level", action: () => this.nextLevel() }, { label: "Replay Level", action: () => this.reset() }] });
   }
 }
