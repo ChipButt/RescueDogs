@@ -12,20 +12,22 @@
     <header id="topBar">
       <div class="stat"><span>Food</span><strong id="foodCount">0</strong></div>
       <div class="title-block">
-        <h1>Trash Yard Rescue</h1>
+        <h1>Landfill Rescue</h1>
         <p id="statusText">Swipe and hold to move.</p>
       </div>
-      <div class="stat"><span>Saved</span><strong id="rescuedCount">0</strong></div>
+      <div class="saved-group">
+        <div class="stat saved-stat"><span>Pups Saved</span><strong id="rescuedCount">0</strong></div>
+        <button id="restartBtn" class="restart-top">Restart</button>
+      </div>
     </header>
 
     <main id="playArea">
       <canvas id="gameCanvas" width="360" height="360" aria-label="Dog rescue maze game canvas"></canvas>
+      <button id="dropFoodBtn" class="drop-food" aria-label="Drop food">DROP<br>FOOD</button>
     </main>
 
     <footer id="bottomControls">
-      <div class="hint">Swipe and hold anywhere on the yard to keep moving.</div>
-      <button id="dropFoodBtn" class="drop-food">DROP FOOD</button>
-      <button id="restartBtn" class="restart">Restart</button>
+      <div class="hint">Swipe and hold anywhere on the landfill to keep moving.</div>
     </footer>
   </div>
 
