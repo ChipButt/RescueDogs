@@ -14,6 +14,22 @@ const canvas = document.getElementById("gameCanvas");
 let renderer;
 let input;
 
+function setRealViewportHeight() {
+  const vv = window.visualViewport;
+  const rawHeight = vv ? vv.height : window.innerHeight;
+  const browserPad = window.matchMedia("(display-mode: standalone)").matches ? 0 : 88;
+  const appHeight = Math.max(520, Math.floor(rawHeight - browserPad));
+  document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
+}
+
+setRealViewportHeight();
+window.addEventListener("resize", setRealViewportHeight);
+window.addEventListener("orientationchange", setRealViewportHeight);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", setRealViewportHeight);
+  window.visualViewport.addEventListener("scroll", setRealViewportHeight);
+}
+
 function hideModal() {
   modal.classList.add("hidden");
   modalActions.innerHTML = "";
