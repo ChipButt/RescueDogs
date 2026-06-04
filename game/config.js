@@ -3,7 +3,9 @@ export const CONFIG = {
   visibleTiles: 11,
   startingFood: 8,
   dogEatTurns: 3,
-  maxFoodBowlAge: 10,
+  maxFoodBowlAge: 14,
+  playerMoveMs: 190,
+  feralMoveMs: 230,
   directions: {
     north: { dx: 0, dy: -1, label: "North" },
     east: { dx: 1, dy: 0, label: "East" },
