@@ -6,6 +6,9 @@ export const CONFIG = {
   maxFoodBowlAge: 14,
   playerMoveMs: 190,
   feralMoveMs: 390,
+  wildDogReactionRange: 4,
+  playerVisionRange: 4,
+  feralAlertTurns: 2,
   directions: {
     north: { dx: 0, dy: -1, label: "North" },
     east: { dx: 1, dy: 0, label: "East" },
