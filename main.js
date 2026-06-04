@@ -10,9 +10,16 @@ const modalTitle = document.getElementById("modalTitle");
 const modalText = document.getElementById("modalText");
 const modalActions = document.getElementById("modalActions");
 const canvas = document.getElementById("gameCanvas");
+const restartBtn = document.getElementById("restartBtn");
+
+const params = new URLSearchParams(window.location.search);
+const isEmbedded = params.get("embedded") === "1";
+const startingFood = Math.max(0, Number.parseInt(params.get("food") || "8", 10) || 0);
 
 let renderer;
 let input;
+let mission;
+let hasSentResult = false;
 
 function setRealViewportHeight() {
   const vv = window.visualViewport;
@@ -27,6 +34,11 @@ window.addEventListener("orientationchange", setRealViewportHeight);
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", setRealViewportHeight);
   window.visualViewport.addEventListener("scroll", setRealViewportHeight);
+}
+
+if (isEmbedded) {
+  document.body.classList.add("embedded");
+  restartBtn.textContent = "Exit";
 }
 
 function hideModal() {
@@ -57,24 +69,54 @@ function showModal({ title, text, html, actions }) {
   modal.classList.remove("hidden");
 }
 
-const mission = new Mission({
+function sendEmbeddedResult(result) {
+  if (!isEmbedded || hasSentResult) return;
+  hasSentResult = true;
+  const payload = {
+    type: "dogarmy:landfill-result",
+    result: {
+      success: Boolean(result.success),
+      dogsRescued: Math.max(0, Number(result.dogsRescued) || 0),
+      foodRemaining: Math.max(0, Number(result.foodRemaining) || 0),
+      reason: result.reason || "unknown",
+      level: result.level || 1,
+    },
+  };
+  window.parent.postMessage(payload, window.location.origin);
+}
+
+mission = new Mission({
+  startingFood,
   onStatus: (message) => { statusText.textContent = message; },
   onStats: ({ food, rescued }) => {
     foodCount.textContent = food;
     rescuedCount.textContent = rescued;
   },
-  onModal: showModal
+  onModal: showModal,
+  onComplete: isEmbedded ? sendEmbeddedResult : null,
 });
 
 renderer = new Renderer(canvas, mission);
 input = new InputController(mission, renderer);
 
-showModal({
-  title: "Landfill Rescue",
-  html: `<div class="intro-copy"><p><strong>Aim:</strong> find pups in the landfill who want to be rescued, feed them, and guide them safely back to the entrance.</p><p><strong>Move:</strong> swipe and hold on the landfill to keep walking in that direction.</p><p><strong>Beware:</strong> wild dogs can be territorial. If they spot you, they will chase you out of the Landfill.</p><p>Use the red <strong>DROP FOOD</strong> button to distract a chasing wild dog.</p></div>`,
-  actions: [{ label: "Start Rescue", action: () => { mission.isPaused = false; } }]
+if (isEmbedded) {
+  mission.isPaused = false;
+  statusText.textContent = "Search the landfill, rescue pups, and get back out.";
+} else {
+  showModal({
+    title: "Landfill Rescue",
+    html: `<div class="intro-copy"><p><strong>Aim:</strong> find pups in the landfill who want to be rescued, feed them, and guide them safely back to the entrance.</p><p><strong>Move:</strong> swipe and hold on the landfill to keep walking in that direction.</p><p><strong>Beware:</strong> wild dogs can be territorial. If they spot you, they will chase you out of the Landfill.</p><p>Use the red <strong>DROP FOOD</strong> button to distract a chasing wild dog.</p></div>`,
+    actions: [{ label: "Start Rescue", action: () => { mission.isPaused = false; } }]
+  });
+  mission.isPaused = true;
+}
+
+restartBtn.addEventListener("click", (event) => {
+  if (!isEmbedded) return;
+  event.preventDefault();
+  event.stopPropagation();
+  sendEmbeddedResult({ success: false, dogsRescued: 0, foodRemaining: mission.player.food, reason: "exited" });
 });
-mission.isPaused = true;
 
 function loop(now) {
   input.update();
@@ -88,5 +130,5 @@ requestAnimationFrame(loop);
 window.DogRescueMaze = {
   mission,
   getResult: () => mission.lastResult,
-  restart: () => mission.reset()
+  restart: () => mission.reset(),
 };
