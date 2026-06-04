@@ -25,8 +25,8 @@ export const RESCUE_DOG_DEFS = {
 };
 
 export const FERAL_DOG_DEFS = {
-  f: { id: "feral_f", name: "Frightened Feral Dog", triggerRadius: 5 },
-  g: { id: "feral_g", name: "Territorial Feral Dog", triggerRadius: 4 }
+  f: { id: "feral_f", name: "Frightened Feral Dog" },
+  g: { id: "feral_g", name: "Territorial Feral Dog" }
 };
 
 export function parseMap(mapRows) {
@@ -51,6 +51,7 @@ export function parseMap(mapRows) {
           startX: x,
           startY: y,
           state: "idle",
+          alertTurnsLeft: 0,
           eatingTurnsLeft: 0,
           targetFoodId: null
         });
