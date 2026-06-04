@@ -17,8 +17,7 @@ let input;
 function setRealViewportHeight() {
   const vv = window.visualViewport;
   const rawHeight = vv ? vv.height : window.innerHeight;
-  const browserPad = window.matchMedia("(display-mode: standalone)").matches ? 0 : 88;
-  const appHeight = Math.max(520, Math.floor(rawHeight - browserPad));
+  const appHeight = Math.max(360, Math.floor(rawHeight));
   document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
 }
 
